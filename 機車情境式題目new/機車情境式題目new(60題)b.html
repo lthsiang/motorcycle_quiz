@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>機車情境式題目</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f9f9f9; }
+    .card { background: white; padding: 1.5em; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+    .question { font-size: 1.2em; margin-bottom: 1em; }
+    #optionsContainer {
+      display: flex;
+      gap: 1em;
+      justify-content: center;
+      margin-bottom: 1em;
+      flex-wrap: wrap;
+    }
+    .option {
+      display: inline-block;
+      padding: 0.75em 1.5em;
+      background: #eee;
+      border-radius: 8px;
+      cursor: pointer;
+      min-width: 80px;
+      text-align: center;
+    }
+    .option.correct { background: #c8f7c5; }
+    .option.wrong { background: #f8c6c6; }
+    .controls { margin-top: 1.5em; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5em; }
+    select, button, input { padding: 0.5em 1em; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; }
+    .tag { font-size: 0.9em; color: #888; margin-top: 0.5em; }
+    .info { margin-top: 1em; color: #555; font-size: 0.95em; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="question" id="questionText">載入中...</div>
+    <div id="optionsContainer"></div>
+    <div class="tag" id="statusText"></div>
+    <div class="controls">
+      <button onclick="nextQuestion()">下一題</button>
+      <select onchange="setFilter(this.value)">
+        <option value="all">全部題目</option>
+        <option value="unseen">尚未練習</option>
+        <option value="wrong">錯誤題目再練習</option>
+      </select>
+      <select onchange="setMode(this.value)">
+        <option value="random">隨機出題</option>
+        <option value="sequential">依序出題</option>
+      </select>
+      <button onclick="resetProgress()">重設練習紀錄</button>
+      <button onclick="resetWrong()">重設錯題紀錄</button>
+      <button onclick="resetStats()">重設正答率</button>
+    </div>
+    <div class="info" id="wrongInfo"></div>
+    <div class="info" id="statsInfo"></div>
+  </div>
+
+<script>
+  const questions = [
+  {
+    "question": "<img src=\"images/question_001.png\" alt=\"圖示\" /> <br>001 依據圖示，行車前的輪胎檢查內容為何？<br><br>(1)檢查輪胎是否有低於磨耗指示平台。<br>(2)檢查輪胎外觀是否龜裂、損傷。<br>(3)以上皆是。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_002.png\" alt=\"圖示\" /> <br>002 機車駕駛人於騎乘機車前應做那些檢查？<br><br>(1)行車前，應檢查輪胎、燈光、喇叭、煞車及油料，以確保行車安全。<br>(2)不需要檢查，以免浪費時間。<br>(3)長途行車才要檢查，短程行車無須檢查。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_003.png\" alt=\"圖示\" /> <br>003 機車排氣管的設備何者正確？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_004.png\" alt=\"圖示\" /> <br>004 依據圖示，何者為正確之乘坐方式？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_005.png\" alt=\"圖示\" /> <br>005 依據圖示，何者為安全載運寵物的方式？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_006.png\" alt=\"圖示\" /> <br>006 圖中何者為安全載運貨物的方式？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_007.png\" alt=\"圖示\" /> <br>007 依據圖示，方向燈的顏色，何者正確？<br><br>(1)橙色<br>(2)綠色<br>(3)藍色",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_008.png\" alt=\"圖示\" /> <br>008 依據圖示，哪輛機車尾燈的燈光符合規定？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_009.png\" alt=\"圖示\" /> <br>009 依據圖示，機車駕駛人應如何起駛才正確？<br><br>(1)從照後鏡察看無來車即可起駛。<br>(2)顯示方向燈後即可起駛。<br>(3)顯示方向燈並擺頭察看前、後方，確認無行人及車輛後起駛。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_010.png\" alt=\"圖示\" /> <br>010 依據圖示，機車駕駛人停車位置，何者正確？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_011.png\" alt=\"圖示\" /> <br>011 依據圖示，機車停放位置下列敘述何者正確？<br><br>(1)沒有壓到紅線就不算違規停車。<br>(2)禁止臨時停車標線之左、右道路範圍內均不得停車。<br>(3)只要不影響交通，可以暫停一下，不會受罰。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_012.png\" alt=\"圖示\" /> <br>012 依據圖示，機車駕駛人行經彎道，何者行為正確？<br><br>(1)A駕駛人跨越道路中央雙黃線，加速超車。<br>(2)B駕駛人減速慢行，不超車，避免車速過快衝入對向車道。<br>(3)C駕駛人在前車右側加速超車。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_013.png\" alt=\"圖示\" /> <br>013 依據圖示中標誌，機車駕駛人違反什麼規定？<br><br>(1)行駛於快車道。<br>(2)未開啓頭燈。<br>(3)未依遵行之方向行駛。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_014.png\" alt=\"圖示\" /> <br>014 依據圖示，機車駕駛人的行駛方式何者錯誤？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_015.png\" alt=\"圖示\" /> <br>015 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)按鳴喇叭，使對方避讓。<br>(2)減速慢行，並做隨時停車之準備。<br>(3)搶先前進，使對方讓道。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_016.png\" alt=\"圖示\" /> <br>016 依據圖示，機車駕駛人的行為何者錯誤？<br><br>(1)猛按喇叭後直接搶先轉彎。<br>(2)轉彎車應禮讓直行車先行。<br>(3)轉彎前應減速慢行，並做隨時停車之準備。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_017.png\" alt=\"圖示\" /> <br>017 依據圖示，機車在前方路口欲右轉，應依哪條路線行駛？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_018.png\" alt=\"圖示\" /> <br>018 依據圖示，機車駕駛人遇障礙物煞車時，反應順序為何？<br><br>(1)A→B→C<br>(2)B→A→C<br>(3)C→B→A",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_019.png\" alt=\"圖示\" /> <br>019 依據圖示，他們要回家，應該怎麼辦？<br><br>(1)搭乘大眾運輸工具或親友接送。<br>(2)稍有醉意無妨，可以騎機車回家。<br>(3)離家很近，短程騎車沒有關係。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_020.png\" alt=\"圖示\" /> <br>020 機車駕駛人行駛途中，手機鈴聲響起，應如何處理才正確？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_021.png\" alt=\"圖示\" /> <br>021 依據圖示，何種行為屬於違規？<br><br>(1)機車駕駛人邊騎車邊抽菸。<br>(2)後座乘客側坐。<br>(3)以上皆是。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_022.png\" alt=\"圖示\" /> <br>022 依據圖示，機車駕駛人應如何正確超越前車？<br><br>(1)沒有規定。<br>(2)從前車右側超車。<br>(3)顯示左方向燈並與前車左側保持半公尺以上之間隔。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_023.png\" alt=\"圖示\" /> <br>023 依據圖示，機車駕駛人在哪個區域可跨越分向線超車？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_024.png\" alt=\"圖示\" /> <br>024 依據圖示，不同車速時之視野範圍，請依車速由慢至快排列：<br><br>(1)A→C→B<br>(2)B→C→A<br>(3)C→A→B",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_025.png\" alt=\"圖示\" /> <br>025 依據圖示，機車駕駛人何時可開啟遠光燈？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_026.png\" alt=\"圖示\" /> <br>026 機車駕駛人行經圖中路段，何者正確？<br><br>(1)應減速慢行，並依速限標誌指示行駛。<br>(2)車前路況無障礙，後行機車可以加速超越行駛。<br>(3)可與他車競駛、超車。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_027.png\" alt=\"圖示\" /> <br>027 依據圖示，機車駕駛人A，發現違規車輛，應如何安全行駛？<br><br>(1)不用理會違規車輛，直接通過交岔路口。<br>(2)注意機車動向，減速通過。<br>(3)按鳴喇叭後，加速行駛通過。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_028.png\" alt=\"圖示\" /> <br>028 圖中哪位機車駕駛人之行為錯誤？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_029.png\" alt=\"圖示\" /> <br>029 依據圖示，在平交道發生車輛故障時，處理順序為何？<br><br>(1)A→B→C<br>(2)C→B→A<br>(3)B→C→A",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_030.png\" alt=\"圖示\" /> <br>030 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)開啟頭燈，駛入X車道。<br>(2)開啟頭燈，駛入Y車道。<br>(3)以上皆可。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_031.png\" alt=\"圖示\" /> <br>031 圖中A、B機車駕駛人依據號誌燈號，誰可直行或右轉行駛？<br><br>(1)A<br>(2)B<br>(3)A、B",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_032.png\" alt=\"圖示\" /> <br>032 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)加速通過。<br>(2)按鳴喇叭後加速通過。<br>(3)注意汽車動向，減速通過。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_033.png\" alt=\"圖示\" /> <br>033 依據圖示，機車駕駛人遇到蜂群時，應如何安全行駛？<br><br>(1)繞道或後退離開，避免動作過大。<br>(2)停車拍照留念。<br>(3)停車驅趕蜂群。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_034.png\" alt=\"圖示\" /> <br>034 依據圖示，機車駕駛人應如何行駛？<br><br>(1)內、外側車道均可行駛。<br>(2)顯示方向燈後，察看後方無來車，直接變換至內側車道。<br>(3)減速後顯示左方向燈，察看照後鏡，確認無來車後，變換至鄰近車道。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_035.png\" alt=\"圖示\" /> <br>035 依據圖示，機車駕駛人發現人孔蓋時應如何應變？<br><br>(1)緊急煞車。<br>(2)放鬆油門，穩握把手。<br>(3)快速變換車道，以閃避人孔蓋。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_036.png\" alt=\"圖示\" /> <br>036 依據圖示，機車駕駛人應如何行駛？<br><br>(1)行駛X路線後，變換車道。<br>(2)直接變換車道，行駛Y路線。<br>(3)顯示左方向燈，並察看有無來車再變換車道，行駛Y路線。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_037.png\" alt=\"圖示\" /> <br>037 依據圖示，機車駕駛人在此環境中，應如何安全行駛？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_038.png\" alt=\"圖示\" /> <br>038 依據圖示，何者行為較安全？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_039.png\" alt=\"圖示\" /> <br>039 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)人車稀少，可以騎快車。<br>(2)依速限行駛，注意遵守標誌，並開亮頭燈。<br>(3)路燈照明設備良好，可以不用開頭燈。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_040.png\" alt=\"圖示\" /> <br>040 依據圖示，機車駕駛人哪項行為錯誤？<br><br>(1)開啟頭燈。<br>(2)降低車速行駛。<br>(3)猛按鳴喇叭，加速行駛。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_041.png\" alt=\"圖示\" /> <br>041 依據圖示，機車駕駛人之行為何者錯誤？<br><br>(1)握穩把手，適當減速慢行。<br>(2)做隨時停車之準備。<br>(3)加速繼續行駛通過。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_042.png\" alt=\"圖示\" /> <br>042 依據圖示，天氣寒冷時，機車駕駛人的行為何種方式安全？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_043.png\" alt=\"圖示\" /> <br>043 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)靠右行駛，避免爬坡的視野死角。<br>(2)猛按喇叭，維持原車速。<br>(3)加速通過。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_044.png\" alt=\"圖示\" /> <br>044 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)不理會違規車輛，繼續直行。<br>(2)注意前方車輛，適當減速因應。<br>(3)按鳴喇叭後立即加速通行。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_045.png\" alt=\"圖示\" /> <br>045 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)閃避落石，繼續行駛。<br>(2)確認道路狀況或改道行駛。<br>(3)移除落石，繼續行駛。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_046.png\" alt=\"圖示\" /> <br>046 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)加速轉彎通過。<br>(2)緊急煞車。<br>(3)減速慢行，避免因視野死角造成危險。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_047.png\" alt=\"圖示\" /> <br>047 依據圖示，機車駕駛人通過路口時，如何行駛較為安全？<br><br>(1)不予理會，繼續行駛。<br>(2)按鳴喇叭，加速前進。<br>(3)減速慢行，禮讓幼童專用車。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_048.png\" alt=\"圖示\" /> <br>048 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)應讓外緣汽車優先通行。<br>(2)不需禮讓。<br>(3)按鳴喇叭後加速通行。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_049.png\" alt=\"圖示\" /> <br>049 依據圖示，兩車進入同一車道，何者應該先行？<br><br>(1)B車先行。<br>(2)A車先行。<br>(3)搶先者即可先行。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_050.png\" alt=\"圖示\" /> <br>050 機車駕駛人行經路口處如何安全行駛較安全？<br><br>(1)按鳴喇叭後，直接從汽車右側超越。<br>(2)按鳴喇叭後，直接繞過汽車左側超越。<br>(3)減速慢行，注意違規車輛之動向。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_051.png\" alt=\"圖示\" /> <br>051 依據圖示，請排列優先路權的順序：<br><br>(1)A→B→C<br>(2)C→B→A<br>(3)B→C→A",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_052.png\" alt=\"圖示\" /> <br>052 依據圖中警察手勢，哪輛機車應停止？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_053.png\" alt=\"圖示\" /> <br>053 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)A<br>(2)B<br>(3)C",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_054.png\" alt=\"圖示\" /> <br>054 依據圖示，機車駕駛人應如何正確反應？<br><br>(1)猛按鳴喇叭後，加速從汽車左側超越。<br>(2)不要強行超越，應減速慢行並做隨時停車之準備。<br>(3)可直接利用對向車道超越汽車。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "<img src=\"images/question_055.png\" alt=\"圖示\" /> <br>055 依據圖示，機車駕駛人應如何處理？<br><br>(1)預作隨時煞停之準備。<br>(2)減速慢行並注意計程車之動向。<br>(3)以上皆是。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "<img src=\"images/question_056.png\" alt=\"圖示\" /> <br>056 依據圖示，機車駕駛人應如何安全行駛？<br><br>(1)注意前方車輛動態，小心變換車道，減速通過。<br>(2)猛按喇叭，催促行駛。<br>(3)加速超車。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_057.png\" alt=\"圖示\" /> <br>057 依據圖示，哪一區域對機車駕駛人潛藏道路風險？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_058.png\" alt=\"圖示\" /> <br>058 依據圖示，當機車駕駛人遇此情形，應該如何行駛？<br><br>(1)應減速慢行，小心通過。<br>(2)猛按喇叭，加速通過。<br>(3)維持原速行駛，變換燈光警告。",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_059.png\" alt=\"圖示\" /> <br>059 依據圖示，當機車故障時，駕駛人應該如何處理？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "<img src=\"images/question_060.png\" alt=\"圖示\" /> <br>060 依據圖示，哪個輪胎之胎壓是正常的？<br><br>(1)A<br>(2)B<br>(3)Ｃ",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "answer": 2
+  }  
+
+  ]; // 題目陣列略，請自行補上原始資料
+
+  let filter = "all";
+  let mode = "random";
+  let currentIndex = null;
+  let seenQuestions = JSON.parse(localStorage.getItem("quiz_progress") || "[]");
+  let wrongQuestions = JSON.parse(localStorage.getItem("quiz_wrong") || "[]");
+  let correctCount = parseInt(localStorage.getItem("quiz_correct") || "0");
+  let totalAttempts = parseInt(localStorage.getItem("quiz_total") || "0");
+  let answeredQuestions = new Set(JSON.parse(localStorage.getItem("quiz_answered") || "[]"));
+
+  let rangeStart = 1;
+  let rangeEnd = questions.length;
+  let sequentialIndices = [];
+  let sequentialPointer = 0;
+
+  function setFilter(value) {
+    filter = value;
+    resetSequential();
+    nextQuestion();
+  }
+
+  function setMode(value) {
+    mode = value;
+    resetSequential();
+    nextQuestion();
+  }
+
+  function setRange(start, end) {
+    rangeStart = Math.max(1, parseInt(start));
+    rangeEnd = Math.min(questions.length, parseInt(end));
+    resetSequential();
+    nextQuestion();
+  }
+
+  function resetSequential() {
+    sequentialIndices = getFilteredQuestions().map(q => questions.indexOf(q));
+    sequentialPointer = 0;
+  }
+
+  function getFilteredQuestions() {
+    let base = questions.map((q, i) => ({ q, i }))
+      .filter(({ i }) => i + 1 >= rangeStart && i + 1 <= rangeEnd);
+    if (filter === "unseen") {
+      base = base.filter(({ i }) => !seenQuestions.includes(i));
+    } else if (filter === "wrong") {
+      base = base.filter(({ i }) => wrongQuestions.includes(i));
+    }
+    return base.map(({ q }) => q);
+  }
+
+  function nextQuestion() {
+    document.getElementById("statusText").innerText = "";
+    const filtered = getFilteredQuestions();
+    if (filtered.length === 0) {
+      document.getElementById("questionText").innerText = "🎉 全部題目都練習完囉！";
+      document.getElementById("optionsContainer").innerHTML = "";
+      return;
+    }
+
+    if (mode === "random") {
+      const randomIndex = Math.floor(Math.random() * filtered.length);
+      currentIndex = questions.indexOf(filtered[randomIndex]);
+    } else {
+      if (sequentialPointer >= sequentialIndices.length) sequentialPointer = 0;
+      currentIndex = sequentialIndices[sequentialPointer++];
+    }
+    showQuestion(questions[currentIndex]);
+  }
+
+  function showQuestion(q) {
+    document.getElementById("questionText").innerHTML = q.question;
+    const container = document.getElementById("optionsContainer");
+    container.innerHTML = "";
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.innerHTML = `<h1>${opt}</h1><br>`;
+      btn.onclick = () => {
+        const isCorrect = i === q.answer;
+        btn.classList.add(isCorrect ? "correct" : "wrong");
+
+        if (!seenQuestions.includes(currentIndex)) {
+          seenQuestions.push(currentIndex);
+          localStorage.setItem("quiz_progress", JSON.stringify(seenQuestions));
+        }
+
+        if (!isCorrect && !wrongQuestions.includes(currentIndex)) {
+          wrongQuestions.push(currentIndex);
+          localStorage.setItem("quiz_wrong", JSON.stringify(wrongQuestions));
+        }
+
+        if (!answeredQuestions.has(currentIndex)) {
+          totalAttempts++;
+          if (isCorrect) correctCount++;
+          answeredQuestions.add(currentIndex);
+          localStorage.setItem("quiz_correct", correctCount);
+          localStorage.setItem("quiz_total", totalAttempts);
+          localStorage.setItem("quiz_answered", JSON.stringify([...answeredQuestions]));
+        }
+
+        updateWrongInfo();
+        updateStats();
+        document.getElementById("statusText").innerText = isCorrect ? "✅ 正確！" : "❌ 錯誤，再試試！";
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  function resetProgress() {
+    if (confirm("確定要重設所有練習紀錄？")) {
+      seenQuestions = [];
+      localStorage.setItem("quiz_progress", JSON.stringify(seenQuestions));
+      resetSequential();
+      nextQuestion();
+    }
+  }
+
+  function resetWrong() {
+    if (confirm("確定要清除所有錯誤題目？")) {
+      wrongQuestions = [];
+      localStorage.setItem("quiz_wrong", JSON.stringify(wrongQuestions));
+      updateWrongInfo();
+    }
+  }
+
+  function resetStats() {
+    if (confirm("確定要重設正答率？")) {
+      correctCount = 0;
+      totalAttempts = 0;
+      answeredQuestions = new Set();
+      localStorage.setItem("quiz_correct", correctCount);
+      localStorage.setItem("quiz_total", totalAttempts);
+      localStorage.setItem("quiz_answered", JSON.stringify([...answeredQuestions]));
+      updateStats();
+    }
+  }
+
+  function updateWrongInfo() {
+    const info = document.getElementById("wrongInfo");
+    if (wrongQuestions.length === 0) {
+      info.innerText = "目前沒有錯誤紀錄。";
+    } else {
+      const list = wrongQuestions.map(i => i + 1).join("、");
+      info.innerText = `共錯 ${wrongQuestions.length} 題，題號：${list}`;
+    }
+  }
+
+  function updateStats() {
+    const info = document.getElementById("statsInfo");
+    if (totalAttempts === 0) {
+      info.innerText = "尚未作答任何題目。";
+    } else {
+      const percent = Math.round((correctCount / totalAttempts) * 100);
+      info.innerText = `作答 ${totalAttempts} 題，正確 ${correctCount} 題，正答率：${percent}%`;
+    }
+  }
+
+  window.onload = () => {
+    const controls = document.querySelector(".controls");
+    const rangeInput = document.createElement("div");
+    rangeInput.innerHTML = `
+      題號範圍：
+      <input type="number" id="rangeStart" value="1" min="1" style="width: 60px" />
+      ~
+      <input type="number" id="rangeEnd" value="${questions.length}" min="1" style="width: 60px" />
+      <button onclick="applyRange()">套用</button>
+    `;
+    controls.prepend(rangeInput);
+    updateWrongInfo();
+    updateStats();
+    resetSequential();
+    nextQuestion();
+  };
+
+  function applyRange() {
+    const start = document.getElementById("rangeStart").value;
+    const end = document.getElementById("rangeEnd").value;
+    setRange(start, end);
+  }
+</script>
+</body>
+</html>
