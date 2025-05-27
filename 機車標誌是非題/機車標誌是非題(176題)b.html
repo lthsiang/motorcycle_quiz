@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>機車標誌是非題練習</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f9f9f9; }
+    .card { background: white; padding: 1.5em; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+    .question { font-size: 1.2em; margin-bottom: 1em; }
+    #optionsContainer {
+      display: flex;
+      gap: 1em;
+      justify-content: center;
+      margin-bottom: 1em;
+      flex-wrap: wrap;
+    }
+    .option {
+      display: inline-block;
+      padding: 0.75em 1.5em;
+      background: #eee;
+      border-radius: 8px;
+      cursor: pointer;
+      min-width: 80px;
+      text-align: center;
+    }
+    .option.correct { background: #c8f7c5; }
+    .option.wrong { background: #f8c6c6; }
+    .controls { margin-top: 1.5em; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5em; }
+    select, button, input { padding: 0.5em 1em; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; }
+    .tag { font-size: 0.9em; color: #888; margin-top: 0.5em; }
+    .info { margin-top: 1em; color: #555; font-size: 0.95em; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="question" id="questionText">載入中...</div>
+    <div id="optionsContainer"></div>
+    <div class="tag" id="statusText"></div>
+    <div class="controls">
+      <button onclick="nextQuestion()">下一題</button>
+      <select onchange="setFilter(this.value)">
+        <option value="all">全部題目</option>
+        <option value="unseen">尚未練習</option>
+        <option value="wrong">錯誤題目再練習</option>
+      </select>
+      <select onchange="setMode(this.value)">
+        <option value="random">隨機出題</option>
+        <option value="sequential">依序出題</option>
+      </select>
+      <button onclick="resetProgress()">重設練習紀錄</button>
+      <button onclick="resetWrong()">重設錯題紀錄</button>
+      <button onclick="resetStats()">重設正答率</button>
+    </div>
+    <div class="info" id="wrongInfo"></div>
+    <div class="info" id="statsInfo"></div>
+  </div>
+
+<script>
+  const questions = [
+  {
+    "question": "第1題：<img src=\"images/question_001.png\" alt=\"圖示\" /> 連續彎路先向左",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第2題：<img src=\"images/question_002.png\" alt=\"圖示\" /> 岔路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第3題：<img src=\"images/question_003.png\" alt=\"圖示\" /> 路面高突",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第4題：<img src=\"images/question_004.png\" alt=\"圖示\" /> 險降坡",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第5題：<img src=\"images/question_005.png\" alt=\"圖示\" /> 狹橋",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第6題：<img src=\"images/question_006.png\" alt=\"圖示\" /> 狹路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第7題：<img src=\"images/question_007.png\" alt=\"圖示\" /> 狹路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第8題：<img src=\"images/question_008.png\" alt=\"圖示\" /> 無柵門鐵路平交道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第9題：<img src=\"images/question_009.png\" alt=\"圖示\" /> 當心行人",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第10題：<img src=\"images/question_010.png\" alt=\"圖示\" /> 注意號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第11題：<img src=\"images/question_011.png\" alt=\"圖示\" /> 路面顛簸",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第12題：<img src=\"images/question_012.png\" alt=\"圖示\" /> 隧道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第13題：<img src=\"images/question_013.png\" alt=\"圖示\" /> 禁止自行車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第14題：<img src=\"images/question_014.png\" alt=\"圖示\" /> 讓路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第15題：<img src=\"images/question_015.png\" alt=\"圖示\" /> 禁止會車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第16題：<img src=\"images/question_016.png\" alt=\"圖示\" /> 分道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第17題：<img src=\"images/question_017.png\" alt=\"圖示\" /> 禁止停車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第18題：<img src=\"images/question_018.png\" alt=\"圖示\" /> 停車再開",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第19題：<img src=\"images/question_019.png\" alt=\"圖示\" /> 禁止任何車輛進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第20題：<img src=\"images/question_020.png\" alt=\"圖示\" /> 禁止迴車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第21題：<img src=\"images/question_021.png\" alt=\"圖示\" /> 禁行汽車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第22題：<img src=\"images/question_022.png\" alt=\"圖示\" /> 車輛寬度限制",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第23題：<img src=\"images/question_023.png\" alt=\"圖示\" /> 禁止四輪以上汽車及機車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第24題：<img src=\"images/question_024.png\" alt=\"圖示\" /> 當心自行車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第25題：<img src=\"images/question_025.png\" alt=\"圖示\" /> 當心身心障礙者",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第26題：<img src=\"images/question_026.png\" alt=\"圖示\" /> 禁止臨時停車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第27題：<img src=\"images/question_027.png\" alt=\"圖示\" /> 禁止停車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第28題：<img src=\"images/question_028.png\" alt=\"圖示\" /> 最高速限",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第29題：<img src=\"images/question_029.png\" alt=\"圖示\" /> 右側車道縮減",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第30題：<img src=\"images/question_030.png\" alt=\"圖示\" /> 禁止三輪車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第31題：<img src=\"images/question_031.png\" alt=\"圖示\" /> 禁止汽車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第32題：<img src=\"images/question_032.png\" alt=\"圖示\" /> 禁止自行車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第33題：<img src=\"images/question_033.png\" alt=\"圖示\" /> 車輛高度限制",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第34題：<img src=\"images/question_034.png\" alt=\"圖示\" /> 禁止空計程車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第35題：<img src=\"images/question_035.png\" alt=\"圖示\" /> 禁止四輪以上汽車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第36題：<img src=\"images/question_036.png\" alt=\"圖示\" /> 禁止任何車輛進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第37題：<img src=\"images/question_037.png\" alt=\"圖示\" /> 禁止右轉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第38題：<img src=\"images/question_038.png\" alt=\"圖示\" /> 危險",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第39題：<img src=\"images/question_039.png\" alt=\"圖示\" /> 注意號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第40題：<img src=\"images/question_040.png\" alt=\"圖示\" /> 當心兒童",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第41題：<img src=\"images/question_041.png\" alt=\"圖示\" /> 當心兒童",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第42題：<img src=\"images/question_042.png\" alt=\"圖示\" /> 路面高突",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第43題：<img src=\"images/question_043.png\" alt=\"圖示\" /> 連續彎路先向右",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第44題：<img src=\"images/question_044.png\" alt=\"圖示\" /> 雙向道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第45題：<img src=\"images/question_045.png\" alt=\"圖示\" /> 救護站",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第46題：<img src=\"images/question_046.png\" alt=\"圖示\" /> 岔路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第47題：<img src=\"images/question_047.png\" alt=\"圖示\" /> 狹路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第48題：<img src=\"images/question_048.png\" alt=\"圖示\" /> 狹路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第49題：<img src=\"images/question_049.png\" alt=\"圖示\" /> 專行車輛(四輪以上汽車專行)",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第50題：<img src=\"images/question_050.png\" alt=\"圖示\" /> 圓環遵行方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第51題：<img src=\"images/question_051.png\" alt=\"圖示\" /> 專行車輛",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第52題：<img src=\"images/question_052.png\" alt=\"圖示\" /> 道路遵行方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第53題：<img src=\"images/question_053.png\" alt=\"圖示\" /> 道路遵行方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第54題：<img src=\"images/question_054.png\" alt=\"圖示\" /> 靠右行駛",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第55題：<img src=\"images/question_055.png\" alt=\"圖示\" /> 慢行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第56題：<img src=\"images/question_056.png\" alt=\"圖示\" /> 單行道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第57題：<img src=\"images/question_057.png\" alt=\"圖示\" /> 救護站",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第58題：<img src=\"images/question_058.png\" alt=\"圖示\" /> 路滑",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第59題：<img src=\"images/question_059.png\" alt=\"圖示\" /> 禁止會車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第60題：<img src=\"images/question_060.png\" alt=\"圖示\" /> 省道路線編號",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第61題：<img src=\"images/question_061.png\" alt=\"圖示\" /> 國道路線編號",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第62題：<img src=\"images/question_062.png\" alt=\"圖示\" /> 最低速限",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第63題：<img src=\"images/question_063.png\" alt=\"圖示\" /> 最高速限",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第64題：<img src=\"images/question_064.png\" alt=\"圖示\" /> 道路遵行方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第65題：<img src=\"images/question_065.png\" alt=\"圖示\" /> 避車彎",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第66題：<img src=\"images/question_066.png\" alt=\"圖示\" /> 大型重型機車停車格",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第67題：<img src=\"images/question_067.png\" alt=\"圖示\" /> 圖中橫向白色實線是指停止線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第68題：<img src=\"images/question_068.png\" alt=\"圖示\" /> 圖中白色雙實線是指車道線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第69題：<img src=\"images/question_069.png\" alt=\"圖示\" /> 近鐵路平交道線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第70題：<img src=\"images/question_070.png\" alt=\"圖示\" /> 圖中白色虛線是指停止線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第71題：<img src=\"images/question_071.png\" alt=\"圖示\" /> 近障礙物線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第72題：<img src=\"images/question_072.png\" alt=\"圖示\" /> 車輛停放線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第73題：<img src=\"images/question_073.png\" alt=\"圖示\" /> 停止線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第74題：<img src=\"images/question_074.png\" alt=\"圖示\" /> 圖中黃色實線與黃色虛線併列部分為單向 禁止超車線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第75題：<img src=\"images/question_075.png\" alt=\"圖示\" /> 圖中黃色雙實線是指禁止停車線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第76題：<img src=\"images/question_076.png\" alt=\"圖示\" /> 圖中白色倒三角形標線為：讓路線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第77題：<img src=\"images/question_077.png\" alt=\"圖示\" /> 路寬變更線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第78題：<img src=\"images/question_078.png\" alt=\"圖示\" /> 路寬變更線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第79題：<img src=\"images/question_079.png\" alt=\"圖示\" /> 注意號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第80題：<img src=\"images/question_080.png\" alt=\"圖示\" /> 特種閃光黃燈號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第81題：<img src=\"images/question_081.png\" alt=\"圖示\" /> 行人專用號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第82題：<img src=\"images/question_082.png\" alt=\"圖示\" /> 學童專用號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第83題：<img src=\"images/question_083.png\" alt=\"圖示\" /> 閃光黃燈",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第84題：<img src=\"images/question_084.png\" alt=\"圖示\" /> 圖中黃色實線是指路面邊線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第85題：<img src=\"images/question_085.png\" alt=\"圖示\" /> 雙線以上電化鐵路平交道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第86題：<img src=\"images/question_086.png\" alt=\"圖示\" /> 圖中斜紋線是指斑馬紋行人穿越道線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第87題：<img src=\"images/question_087.png\" alt=\"圖示\" /> 圖中白色虛線是指車道線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第88題：<img src=\"images/question_088.png\" alt=\"圖示\" /> 指向線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第89題：<img src=\"images/question_089.png\" alt=\"圖示\" /> 圖中黃色雙實線是指雙向禁止超車線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第90題：<img src=\"images/question_090.png\" alt=\"圖示\" /> 圖中黃色雙實線是指分向限制線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第91題：<img src=\"images/question_091.png\" alt=\"圖示\" /> 圖中白色倒三角形標線為近障礙物線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第92題：<img src=\"images/question_092.png\" alt=\"圖示\" /> 近障礙物線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第93題：<img src=\"images/question_093.png\" alt=\"圖示\" /> 圖中停止線前端白色長方形標線為機慢車 左轉待轉區線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第94題：<img src=\"images/question_094.png\" alt=\"圖示\" /> 圖中停止線前端白色長方形標線為機車停 等區線，用以指示大型重型機車以外之機 車駕駛人於紅燈亮時行駛停等之範圍。",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第95題：<img src=\"images/question_095.png\" alt=\"圖示\" /> 近障礙物線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第96題：<img src=\"images/question_096.png\" alt=\"圖示\" /> 行車管制號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第97題：<img src=\"images/question_097.png\" alt=\"圖示\" /> 閃光黃燈",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第98題：<img src=\"images/question_098.png\" alt=\"圖示\" /> 加油站",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第99題：<img src=\"images/question_099.png\" alt=\"圖示\" /> 此路不通",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第100題：<img src=\"images/question_100.png\" alt=\"圖示\" /> 全部車輛停止",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第101題：<img src=\"images/question_101.png\" alt=\"圖示\" /> 左方來車左轉彎",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第102題：<img src=\"images/question_102.png\" alt=\"圖示\" /> 右方來車停止",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第103題：<img src=\"images/question_103.png\" alt=\"圖示\" /> 右方來車速行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第104題：<img src=\"images/question_104.png\" alt=\"圖示\" /> 前方來車停止",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第105題：<img src=\"images/question_105.png\" alt=\"圖示\" /> 前後來車停止，左右來車通行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第106題：<img src=\"images/question_106.png\" alt=\"圖示\" /> 左方來車速行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第107題：<img src=\"images/question_107.png\" alt=\"圖示\" /> 左方來車左轉彎",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第108題：<img src=\"images/question_108.png\" alt=\"圖示\" /> 右道封閉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第109題：<img src=\"images/question_109.png\" alt=\"圖示\" /> 左道封閉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第110題：<img src=\"images/question_110.png\" alt=\"圖示\" /> 道路施工",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第111題：<img src=\"images/question_111.png\" alt=\"圖示\" /> 車輛改道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第112題：<img src=\"images/question_112.png\" alt=\"圖示\" /> 指示改道方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第113題：<img src=\"images/question_113.png\" alt=\"圖示\" /> 道路施工",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第114題：<img src=\"images/question_114.png\" alt=\"圖示\" /> 本標誌是指向北行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第115題：<img src=\"images/question_115.png\" alt=\"圖示\" /> 圖中網狀線，用以告示車輛駕駛人在本標 線範圍內禁止臨時停車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第116題：<img src=\"images/question_116.png\" alt=\"圖示\" /> 圖中網狀線，用以告示車輛駕駛人在本標 線範圍內可以臨時停車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第117題：<img src=\"images/question_117.png\" alt=\"圖示\" /> 左側斷崖",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第118題：<img src=\"images/question_118.png\" alt=\"圖示\" /> 注意落石",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第119題：<img src=\"images/question_119.png\" alt=\"圖示\" /> 注意強風",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第120題：<img src=\"images/question_120.png\" alt=\"圖示\" /> 注意標誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第121題：<img src=\"images/question_121.png\" alt=\"圖示\" /> 禁止超車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第122題：<img src=\"images/question_122.png\" alt=\"圖示\" /> 禁止會車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第123題：<img src=\"images/question_123.png\" alt=\"圖示\" /> 停車檢查",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第124題：<img src=\"images/question_124.png\" alt=\"圖示\" /> 禁止停車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第125題：<img src=\"images/question_125.png\" alt=\"圖示\" /> 圖中黃色虛線為：行車分向線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第126題：<img src=\"images/question_126.png\" alt=\"圖示\" /> 圖中黃色虛線為：分向限制線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第127題：<img src=\"images/question_127.png\" alt=\"圖示\" /> 圖中白色紋線為：枕木紋行人穿越道線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第128題：<img src=\"images/question_128.png\" alt=\"圖示\" /> 圖中白色紋線為：斑馬紋行人穿越道線",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第129題：<img src=\"images/question_129.png\" alt=\"圖示\" /> 省道路線編號",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第130題：<img src=\"images/question_130.png\" alt=\"圖示\" /> 國道路線編號",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第131題：<img src=\"images/question_131.png\" alt=\"圖示\" /> 最高速限",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第132題：<img src=\"images/question_132.png\" alt=\"圖示\" /> 最低速限",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第133題：<img src=\"images/question_133.png\" alt=\"圖示\" /> 本號誌是車道管制號誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第134題：<img src=\"images/question_134.png\" alt=\"圖示\" /> 禁止左轉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第135題：<img src=\"images/question_135.png\" alt=\"圖示\" /> 分道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第136題：<img src=\"images/question_136.png\" alt=\"圖示\" /> 雙向道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第137題：<img src=\"images/question_137.png\" alt=\"圖示\" /> 岔路",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第138題：<img src=\"images/question_138.png\" alt=\"圖示\" /> 當心飛機",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第139題：<img src=\"images/question_139.png\" alt=\"圖示\" /> 道路僅准直行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第140題：<img src=\"images/question_140.png\" alt=\"圖示\" /> 車道遵行方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第141題：<img src=\"images/question_141.png\" alt=\"圖示\" /> 道路遵行方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第142題：<img src=\"images/question_142.png\" alt=\"圖示\" /> 靠右行駛",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第143題：<img src=\"images/question_143.png\" alt=\"圖示\" /> 大客車專行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第144題：<img src=\"images/question_144.png\" alt=\"圖示\" /> 車道指定四輪以上汽車專行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第145題：<img src=\"images/question_145.png\" alt=\"圖示\" /> 禁鳴喇叭",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第146題：<img src=\"images/question_146.png\" alt=\"圖示\" /> 禁止自行車進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第147題：<img src=\"images/question_147.png\" alt=\"圖示\" /> 車道禁止進入",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第148題：<img src=\"images/question_148.png\" alt=\"圖示\" /> 禁止左右轉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第149題：<img src=\"images/question_149.png\" alt=\"圖示\" /> 此路不通",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第150題：<img src=\"images/question_150.png\" alt=\"圖示\" /> 禁止排氣量 550 立方公分以上大型重型機 車左轉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第151題：<img src=\"images/question_151.png\" alt=\"圖示\" /> 行車安全距離限制",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第152題：<img src=\"images/question_152.png\" alt=\"圖示\" /> 地名",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第153題：<img src=\"images/question_153.png\" alt=\"圖示\" /> 地名方向指示",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第154題：<img src=\"images/question_154.png\" alt=\"圖示\" /> 路名",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第155題：<img src=\"images/question_155.png\" alt=\"圖示\" /> 身心障礙者停車位",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第156題：<img src=\"images/question_156.png\" alt=\"圖示\" /> 修理站",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第157題：<img src=\"images/question_157.png\" alt=\"圖示\" /> 專行汽車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第158題：<img src=\"images/question_158.png\" alt=\"圖示\" /> 迴轉道",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第159題：<img src=\"images/question_159.png\" alt=\"圖示\" /> 車輛故障標誌",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第160題：<img src=\"images/question_160.png\" alt=\"圖示\" /> 圖中停止線後方白色長方形標線為機車停 等區線，用以指示大型重型機車以外之機 車駕駛人於紅燈亮時行駛停等之範圍。",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第161題：<img src=\"images/question_161.png\" alt=\"圖示\" /> 圖中停止線後方白色長方形標線為機慢車 左轉待轉區線。",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第162題：<img src=\"images/question_162.png\" alt=\"圖示\" /> ",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第163題：<img src=\"images/question_163.png\" alt=\"圖示\" /> 圖中白色箭頭為車道縮減標線，用以指示 前方車道縮減，指引匯入鄰近車道。",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第164題：<img src=\"images/question_164.png\" alt=\"圖示\" /> 圖中白色箭頭為避車彎，於車輛有緊急狀 況時暫時停放之用。",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第165題：<img src=\"images/question_165.png\" alt=\"圖示\" /> 充電站",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第166題：<img src=\"images/question_166.png\" alt=\"圖示\" /> 充電站",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第167題：<img src=\"images/question_167.png\" alt=\"圖示\" /> 僅准直行",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第168題：<img src=\"images/question_168.png\" alt=\"圖示\" /> 圓環遵行方向",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第169題：<img src=\"images/question_169.png\" alt=\"圖示\" /> 當心大客車",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第170題：<img src=\"images/question_170.png\" alt=\"圖示\" /> 左轉彎",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第171題：<img src=\"images/question_171.png\" alt=\"圖示\" /> 右轉彎",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第172題：<img src=\"images/question_172.png\" alt=\"圖示\" /> 減速暫停",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第173題：<img src=\"images/question_173.png\" alt=\"圖示\" /> 允讓後車超越",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "第174題：<img src=\"images/question_174.png\" alt=\"圖示\" /> 當心動物",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第175題：<img src=\"images/question_175.png\" alt=\"圖示\" /> 自行車騎士手勢預告即將左轉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "第176題：<img src=\"images/question_176.png\" alt=\"圖示\" /> 自行車騎士手勢預告即將右轉",
+    "options": [
+      "O",
+      "X"
+    ],
+    "answer": 0
+  }
+
+  ]; // 題目陣列略，請自行補上原始資料
+
+  let filter = "all";
+  let mode = "random";
+  let currentIndex = null;
+  let seenQuestions = JSON.parse(localStorage.getItem("quiz_progress") || "[]");
+  let wrongQuestions = JSON.parse(localStorage.getItem("quiz_wrong") || "[]");
+  let correctCount = parseInt(localStorage.getItem("quiz_correct") || "0");
+  let totalAttempts = parseInt(localStorage.getItem("quiz_total") || "0");
+  let answeredQuestions = new Set(JSON.parse(localStorage.getItem("quiz_answered") || "[]"));
+
+  let rangeStart = 1;
+  let rangeEnd = questions.length;
+  let sequentialIndices = [];
+  let sequentialPointer = 0;
+
+  function setFilter(value) {
+    filter = value;
+    resetSequential();
+    nextQuestion();
+  }
+
+  function setMode(value) {
+    mode = value;
+    resetSequential();
+    nextQuestion();
+  }
+
+  function setRange(start, end) {
+    rangeStart = Math.max(1, parseInt(start));
+    rangeEnd = Math.min(questions.length, parseInt(end));
+    resetSequential();
+    nextQuestion();
+  }
+
+  function resetSequential() {
+    sequentialIndices = getFilteredQuestions().map(q => questions.indexOf(q));
+    sequentialPointer = 0;
+  }
+
+  function getFilteredQuestions() {
+    let base = questions.map((q, i) => ({ q, i }))
+      .filter(({ i }) => i + 1 >= rangeStart && i + 1 <= rangeEnd);
+    if (filter === "unseen") {
+      base = base.filter(({ i }) => !seenQuestions.includes(i));
+    } else if (filter === "wrong") {
+      base = base.filter(({ i }) => wrongQuestions.includes(i));
+    }
+    return base.map(({ q }) => q);
+  }
+
+  function nextQuestion() {
+    document.getElementById("statusText").innerText = "";
+    const filtered = getFilteredQuestions();
+    if (filtered.length === 0) {
+      document.getElementById("questionText").innerText = "🎉 全部題目都練習完囉！";
+      document.getElementById("optionsContainer").innerHTML = "";
+      return;
+    }
+
+    if (mode === "random") {
+      const randomIndex = Math.floor(Math.random() * filtered.length);
+      currentIndex = questions.indexOf(filtered[randomIndex]);
+    } else {
+      if (sequentialPointer >= sequentialIndices.length) sequentialPointer = 0;
+      currentIndex = sequentialIndices[sequentialPointer++];
+    }
+    showQuestion(questions[currentIndex]);
+  }
+
+  function showQuestion(q) {
+    document.getElementById("questionText").innerHTML = q.question;
+    const container = document.getElementById("optionsContainer");
+    container.innerHTML = "";
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.innerHTML = `<h1>${opt}</h1><br>`;
+      btn.onclick = () => {
+        const isCorrect = i === q.answer;
+        btn.classList.add(isCorrect ? "correct" : "wrong");
+
+        if (!seenQuestions.includes(currentIndex)) {
+          seenQuestions.push(currentIndex);
+          localStorage.setItem("quiz_progress", JSON.stringify(seenQuestions));
+        }
+
+        if (!isCorrect && !wrongQuestions.includes(currentIndex)) {
+          wrongQuestions.push(currentIndex);
+          localStorage.setItem("quiz_wrong", JSON.stringify(wrongQuestions));
+        }
+
+        if (!answeredQuestions.has(currentIndex)) {
+          totalAttempts++;
+          if (isCorrect) correctCount++;
+          answeredQuestions.add(currentIndex);
+          localStorage.setItem("quiz_correct", correctCount);
+          localStorage.setItem("quiz_total", totalAttempts);
+          localStorage.setItem("quiz_answered", JSON.stringify([...answeredQuestions]));
+        }
+
+        updateWrongInfo();
+        updateStats();
+        document.getElementById("statusText").innerText = isCorrect ? "✅ 正確！" : "❌ 錯誤，再試試！";
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  function resetProgress() {
+    if (confirm("確定要重設所有練習紀錄？")) {
+      seenQuestions = [];
+      localStorage.setItem("quiz_progress", JSON.stringify(seenQuestions));
+      resetSequential();
+      nextQuestion();
+    }
+  }
+
+  function resetWrong() {
+    if (confirm("確定要清除所有錯誤題目？")) {
+      wrongQuestions = [];
+      localStorage.setItem("quiz_wrong", JSON.stringify(wrongQuestions));
+      updateWrongInfo();
+    }
+  }
+
+  function resetStats() {
+    if (confirm("確定要重設正答率？")) {
+      correctCount = 0;
+      totalAttempts = 0;
+      answeredQuestions = new Set();
+      localStorage.setItem("quiz_correct", correctCount);
+      localStorage.setItem("quiz_total", totalAttempts);
+      localStorage.setItem("quiz_answered", JSON.stringify([...answeredQuestions]));
+      updateStats();
+    }
+  }
+
+  function updateWrongInfo() {
+    const info = document.getElementById("wrongInfo");
+    if (wrongQuestions.length === 0) {
+      info.innerText = "目前沒有錯誤紀錄。";
+    } else {
+      const list = wrongQuestions.map(i => i + 1).join("、");
+      info.innerText = `共錯 ${wrongQuestions.length} 題，題號：${list}`;
+    }
+  }
+
+  function updateStats() {
+    const info = document.getElementById("statsInfo");
+    if (totalAttempts === 0) {
+      info.innerText = "尚未作答任何題目。";
+    } else {
+      const percent = Math.round((correctCount / totalAttempts) * 100);
+      info.innerText = `作答 ${totalAttempts} 題，正確 ${correctCount} 題，正答率：${percent}%`;
+    }
+  }
+
+  window.onload = () => {
+    const controls = document.querySelector(".controls");
+    const rangeInput = document.createElement("div");
+    rangeInput.innerHTML = `
+      題號範圍：
+      <input type="number" id="rangeStart" value="1" min="1" style="width: 60px" />
+      ~
+      <input type="number" id="rangeEnd" value="${questions.length}" min="1" style="width: 60px" />
+      <button onclick="applyRange()">套用</button>
+    `;
+    controls.prepend(rangeInput);
+    updateWrongInfo();
+    updateStats();
+    resetSequential();
+    nextQuestion();
+  };
+
+  function applyRange() {
+    const start = document.getElementById("rangeStart").value;
+    const end = document.getElementById("rangeEnd").value;
+    setRange(start, end);
+  }
+</script>
+</body>
+</html>
